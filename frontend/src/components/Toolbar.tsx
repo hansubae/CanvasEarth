@@ -4,7 +4,6 @@ interface ToolbarProps {
   onAddText: () => void;
   onAddYouTube: () => void;
   onAddImage: (file: File) => void;
-  onAddVideo: (file: File) => void;
   onDeleteSelected: () => void;
   hasSelection: boolean;
 }
@@ -13,7 +12,6 @@ export const Toolbar = ({
   onAddText,
   onAddYouTube,
   onAddImage,
-  onAddVideo,
   onDeleteSelected,
   hasSelection,
 }: ToolbarProps) => {
@@ -23,15 +21,6 @@ export const Toolbar = ({
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       onAddImage(file);
-      // Reset input
-      e.target.value = '';
-    }
-  };
-
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('video/')) {
-      onAddVideo(file);
       // Reset input
       e.target.value = '';
     }
@@ -116,30 +105,6 @@ export const Toolbar = ({
                   accept="image/*"
                   className="hidden"
                   onChange={handleImageUpload}
-                />
-              </label>
-
-              {/* Video Upload (native input) */}
-              <label className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors cursor-pointer text-sm">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-                Upload Video
-                <input
-                  type="file"
-                  accept="video/mp4,video/webm,video/ogg"
-                  className="hidden"
-                  onChange={handleVideoUpload}
                 />
               </label>
             </div>

@@ -5,7 +5,6 @@ import { useCanvasStore } from '../stores/canvasStore';
 import { CanvasObjectComponent } from './CanvasObject';
 import { Toolbar } from './Toolbar';
 import { YouTubeOverlay } from './YouTubeOverlay';
-import { VideoOverlay } from './VideoOverlay';
 import { DropZone } from './DropZone';
 import { canvasApi } from '../services/canvasApi';
 import { ViewportBounds, ObjectType, CreateObjectRequest } from '../types';
@@ -33,14 +32,6 @@ export const InfiniteCanvas = () => {
   const [playingVideo, setPlayingVideo] = useState<{
     videoId: string;
     canvasX: number; // Canvas coordinates
-    canvasY: number;
-    width: number;
-    height: number;
-  } | null>(null);
-
-  const [playingMP4Video, setPlayingMP4Video] = useState<{
-    videoUrl: string;
-    canvasX: number;
     canvasY: number;
     width: number;
     height: number;
@@ -282,53 +273,6 @@ export const InfiniteCanvas = () => {
     await handleImageFile(file);
   };
 
-  // Handle video file
-  const handleVideoFile = async (file: File, x?: number, y?: number) => {
-    console.log('handleVideoFile called with:', file.name, { x, y });
-
-    const stage = stageRef.current;
-    if (!stage) {
-      console.log('No stage in handleVideoFile');
-      return;
-    }
-
-    const scale = stage.scaleX();
-    const stagePos = stage.position();
-
-    // Use provided position or center of viewport
-    const posX = x !== undefined ? x : (-stagePos.x + dimensions.width / 2) / scale;
-    const posY = y !== undefined ? y : (-stagePos.y + dimensions.height / 2) / scale;
-
-    console.log('Video will be placed at:', { posX, posY });
-
-    // Default video size (16:9 aspect ratio)
-    const width = 560;
-    const height = 315;
-
-    try {
-      const created = await canvasApi.uploadFile(
-        file,
-        ObjectType.VIDEO,
-        posX - width / 2,
-        posY - height / 2,
-        width,
-        height,
-        objects.length,
-        1 // TODO: Replace with actual user ID
-      );
-      console.log('Video object created successfully:', created.id);
-      addObject(created);
-    } catch (error) {
-      console.error('Failed to upload video:', error);
-      alert('Failed to upload video. Please try again.');
-    }
-  };
-
-  // Handle video upload from toolbar
-  const handleAddVideoFromToolbar = async (file: File) => {
-    await handleVideoFile(file);
-  };
-
   // Handle adding text object
   const handleAddText = async () => {
     const stage = stageRef.current;
@@ -461,22 +405,6 @@ export const InfiniteCanvas = () => {
     return () => window.removeEventListener('playYouTubeVideo', handlePlayVideo as EventListener);
   }, []);
 
-  // Handle MP4 video play
-  useEffect(() => {
-    const handlePlayMP4Video = (e: CustomEvent) => {
-      const { url, position, size } = e.detail;
-      setPlayingMP4Video({
-        videoUrl: url,
-        canvasX: position.x,
-        canvasY: position.y,
-        width: size.width,
-        height: size.height,
-      });
-    };
-
-    window.addEventListener('playVideo', handlePlayMP4Video as EventListener);
-    return () => window.removeEventListener('playVideo', handlePlayMP4Video as EventListener);
-  }, []);
 
   return (
     <DropZone onImageDrop={handleImageDrop}>
@@ -487,7 +415,6 @@ export const InfiniteCanvas = () => {
         onAddText={handleAddText}
         onAddYouTube={handleAddYouTube}
         onAddImage={handleAddImageFromToolbar}
-        onAddVideo={handleAddVideoFromToolbar}
         onDeleteSelected={handleDeleteSelected}
         hasSelection={selectedObjectId !== null}
       />
@@ -543,18 +470,6 @@ export const InfiniteCanvas = () => {
           height={playingVideo.height}
           stageRef={stageRef}
           onClose={() => setPlayingVideo(null)}
-        />
-      )}
-
-      {playingMP4Video && (
-        <VideoOverlay
-          videoUrl={playingMP4Video.videoUrl}
-          canvasX={playingMP4Video.canvasX}
-          canvasY={playingMP4Video.canvasY}
-          width={playingMP4Video.width}
-          height={playingMP4Video.height}
-          stageRef={stageRef}
-          onClose={() => setPlayingMP4Video(null)}
         />
       )}
       </div>

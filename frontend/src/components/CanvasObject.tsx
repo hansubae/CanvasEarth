@@ -60,46 +60,6 @@ const extractYouTubeId = (url: string): string | null => {
   return match && match[7].length === 11 ? match[7] : null;
 };
 
-// Video component with thumbnail and play button
-const VideoObject = ({ url, width, height }: { url: string; width: number; height: number }) => {
-  // For now, just show a simple placeholder with play button
-  // In a real app, you might want to generate a thumbnail from the video
-  return (
-    <Group>
-      <Rect width={width} height={height} fill="#1a1a1a" cornerRadius={8} />
-      <Text
-        text="MP4 Video"
-        fontSize={16}
-        fill="#fff"
-        width={width}
-        height={height / 2}
-        align="center"
-        verticalAlign="bottom"
-        padding={10}
-      />
-      {/* Play button overlay */}
-      <Group x={width / 2 - 30} y={height / 2 - 20}>
-        <Rect
-          width={60}
-          height={40}
-          fill="#4CAF50"
-          cornerRadius={5}
-          opacity={0.8}
-        />
-        <Text
-          text="▶"
-          fontSize={24}
-          fill="#fff"
-          width={60}
-          height={40}
-          align="center"
-          verticalAlign="middle"
-        />
-      </Group>
-    </Group>
-  );
-};
-
 // YouTube embed component with thumbnail
 const YouTubeObject = ({ url, width, height }: { url: string; width: number; height: number }) => {
   const videoId = extractYouTubeId(url);
@@ -215,15 +175,6 @@ export const CanvasObjectComponent = ({
           size: { width: object.width, height: object.height }
         }
       }));
-    } else if (object.objectType === ObjectType.VIDEO) {
-      // Play MP4 video in overlay
-      window.dispatchEvent(new CustomEvent('playVideo', {
-        detail: {
-          url: object.contentUrl,
-          position: { x: object.positionX, y: object.positionY },
-          size: { width: object.width, height: object.height }
-        }
-      }));
     }
   };
 
@@ -249,14 +200,6 @@ export const CanvasObjectComponent = ({
       case ObjectType.YOUTUBE:
         return (
           <YouTubeObject
-            url={object.contentUrl}
-            width={object.width}
-            height={object.height}
-          />
-        );
-      case ObjectType.VIDEO:
-        return (
-          <VideoObject
             url={object.contentUrl}
             width={object.width}
             height={object.height}
