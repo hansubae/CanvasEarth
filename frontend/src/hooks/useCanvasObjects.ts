@@ -1,0 +1,87 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { canvasApi } from '../services/canvasApi';
+import {
+  ViewportBounds,
+  CreateObjectRequest,
+  UpdateObjectRequest,
+  CanvasObject,
+} from '../types';
+
+// Query keys
+export const canvasQueryKeys = {
+  all: ['canvas-objects'] as const,
+  viewport: (bounds: ViewportBounds) =>
+    ['canvas-objects', 'viewport', bounds] as const,
+  detail: (id: number) => ['canvas-objects', 'detail', id] as const,
+};
+
+// Hook for fetching objects in viewport
+export const useCanvasObjects = (bounds: ViewportBounds, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: canvasQueryKeys.viewport(bounds),
+    queryFn: () => canvasApi.getObjectsInViewport(bounds),
+    enabled,
+    staleTime: 5000, // Consider data fresh for 5 seconds
+    refetchOnWindowFocus: false,
+  });
+};
+
+// Hook for creating object
+export const useCreateObject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: CreateObjectRequest) =>
+      canvasApi.createObject(request),
+    onSuccess: () => {
+      // Invalidate all viewport queries to refetch
+      queryClient.invalidateQueries({ queryKey: canvasQueryKeys.all });
+    },
+  });
+};
+
+// Hook for updating object
+export const useUpdateObject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      request,
+    }: {
+      id: number;
+      request: UpdateObjectRequest;
+    }) => canvasApi.updateObject(id, request),
+    onSuccess: (updatedObject) => {
+      // Update the object in all relevant queries
+      queryClient.setQueriesData<CanvasObject[]>(
+        { queryKey: canvasQueryKeys.all },
+        (old) => {
+          if (!old) return old;
+          return old.map((obj) =>
+            obj.id === updatedObject.id ? updatedObject : obj
+          );
+        }
+      );
+    },
+  });
+};
+
+// Hook for deleting object
+export const useDeleteObject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => canvasApi.deleteObject(id),
+    onSuccess: (_, deletedId) => {
+      // Remove the object from all relevant queries
+      queryClient.setQueriesData<CanvasObject[]>(
+        { queryKey: canvasQueryKeys.all },
+        (old) => {
+          if (!old) return old;
+          return old.filter((obj) => obj.id !== deletedId);
+        }
+      );
+    },
+  });
+};

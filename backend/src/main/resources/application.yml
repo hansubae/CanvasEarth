@@ -1,0 +1,46 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB     #비디오 파일 크기제한
+      max-request-size: 100MB  #비디오 파일 크기제한
+  codec:
+    max-in-memory-size: 100MB  #비디오 파일 크기제한
+  application:
+    name: canvas-earth-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/canvasearth
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  # CORS Configuration
+  web:
+    cors:
+      allowed-origins: "http://localhost:5173"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+
+server:
+  port: 8080
+  tomcat:
+      max-http-post-size: 100MB  #비디오 파일 크기제한
+      max-swallow-size: 100MB    #비디오 파일 크기제한
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

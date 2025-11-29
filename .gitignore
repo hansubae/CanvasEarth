@@ -1,0 +1,37 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+*.iws
+
+# Docker
+docker-compose.override.yml
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/.gradle/
+backend/build/
+
+# Build outputs
+frontend/dist/
+frontend/build/
+backend/out/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
