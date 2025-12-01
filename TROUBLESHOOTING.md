@@ -86,3 +86,92 @@ return match && match[1] && match[1].length === 11 ? match[1] : null;
 3. 정규식 변경 후에는 모든 케이스에 대한 테스트 필수
 
 ---
+
+## 2025-12-02: TextEditor Save 후 편집 툴이 다시 열리는 문제
+
+### 📋 문제 상황
+- TextEditor에서 Save 버튼을 눌렀을 때 편집 툴이 닫히지 않음
+- `setEditingText(null)`을 호출했는데도 편집 툴이 바로 다시 나타남
+
+### 🔍 원인 분석
+
+#### 1. 초기 구현
+```typescript
+const handleTextSave = async (...) => {
+  const updated = await canvasApi.updateObject(editingText.id, {...});
+  updateObject(editingText.id, updated);
+  setEditingText(null); // 편집 툴 닫기
+};
+```
+
+#### 2. 문제 발생 메커니즘
+1. `updateObject()`가 호출되면서 `objects` 배열이 업데이트됨
+2. `useEffect`의 dependency에 `objects`가 포함되어 있음
+3. `objects` 변경으로 `useEffect` 재실행
+4. `selectedObjectId`가 여전히 텍스트 오브젝트 ID를 가리키고 있음
+5. 조건문 통과하여 `setEditingText()`가 다시 호출됨
+6. 편집 툴이 다시 열림
+
+```typescript
+useEffect(() => {
+  if (selectedObjectId === null) {
+    setEditingText(null);
+    return;
+  }
+
+  const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+
+  if (selectedObject && selectedObject.objectType === ObjectType.TEXT) {
+    setEditingText({ ... }); // 다시 열림!
+  }
+}, [selectedObjectId, objects]); // objects 변경으로 재실행
+```
+
+### ✅ 해결 방법
+
+Save/Cancel 시 선택을 해제하여 `useEffect`가 다시 실행되어도 편집 툴이 열리지 않도록 수정:
+
+```typescript
+const handleTextSave = async (text: string, fontSize: number, fontWeight: string, textColor: string) => {
+  if (!editingText) return;
+
+  try {
+    const updated = await canvasApi.updateObject(editingText.id, {
+      contentUrl: text,
+      fontSize,
+      fontWeight,
+      textColor,
+    });
+    updateObject(editingText.id, updated);
+    // 선택 해제로 편집 툴이 다시 열리지 않도록 함
+    setSelectedObjectId(null);
+    setEditingText(null);
+  } catch (error) {
+    console.error('Failed to update text:', error);
+  }
+};
+
+const handleTextCancel = () => {
+  setSelectedObjectId(null);
+  setEditingText(null);
+};
+```
+
+### 📁 수정된 파일
+- `frontend/src/components/InfiniteCanvas.tsx` (line 423-449)
+  - `handleTextSave`: `setSelectedObjectId(null)` 추가
+  - `handleTextCancel`: `setSelectedObjectId(null)` 추가
+
+### 🧪 테스트 결과
+- ✅ Save 버튼 클릭 시 편집 툴이 즉시 닫힘
+- ✅ Cancel 버튼 클릭 시 편집 툴이 즉시 닫힘
+- ✅ Esc 키로도 정상 동작
+- ✅ 편집 툴이 다시 열리지 않음
+
+### 📚 교훈
+1. `useEffect`의 dependency를 명확히 이해해야 함
+2. State 업데이트 순서가 중요함 (선택 해제 → 편집 툴 닫기)
+3. React의 re-render 사이클을 고려한 설계 필요
+4. 컴포넌트 간 상태 의존성을 최소화해야 함
+
+---

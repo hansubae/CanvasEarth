@@ -204,8 +204,38 @@ Phase 3가 완료되었으므로, 다음은 **Phase 4: Real-time & Polish**입�
 
 - ✅ **Phase 1**: Project Setup & Docker (완료)
 - ✅ **Phase 2**: Backend Core (CRUD) (완료)
-- ✅ **Phase 3**: Frontend Canvas Basic (완료) ← 현재
-- ⏳ **Phase 4**: Real-time & Polish (대기 중)
+- ✅ **Phase 3**: Frontend Canvas Basic (완료)
+- 🚧 **Phase 4**: Real-time & Polish (진행 중) ← 현재
+
+## 🆕 최신 업데이트 (2025-12-02)
+
+### 그리드 배경 패턴
+- 50px 간격의 그리드 패턴 배경 추가
+- 툴바에 그리드 on/off 토글 버튼 추가
+- 뷰포트 기반 렌더링으로 성능 최적화
+
+### 텍스트 폰트 커스터마이징
+- 폰트 크기 조절 (12px ~ 64px)
+- 폰트 두께 설정 (normal, bold)
+- 텍스트 색상 선택 (color picker)
+- Backend: fontSize, fontWeight, textColor 컬럼 추가
+
+### TextEditor 컴포넌트
+- **파일**: `frontend/src/components/TextEditor.tsx`
+- 텍스트 선택 시 오브젝트 옆에 편집 툴 표시
+- requestAnimationFrame 기반 실시간 위치 추적
+- 캔버스 팬/줌 시 부드럽게 따라다님
+- Save/Cancel 버튼, 키보드 단축키 지원
+
+### 텍스트 편집 방식 개선
+- 변경 전: 더블클릭으로 편집
+- 변경 후: 텍스트 선택 시 자동으로 편집 툴 표시
+- 선택 해제 또는 Save/Cancel 시 편집 툴 자동 닫힘
+
+### YouTube 다중 재생 지원
+- 여러 YouTube 비디오 동시 재생 가능
+- 각 비디오에 고유 ID 부여
+- 독립적인 재생/종료 제어
 
 ---
 
