@@ -1,26 +1,30 @@
 import { useRef, useEffect, useState } from 'react';
-import { Stage, Layer } from 'react-konva';
+import { Stage, Layer, Line } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore } from '../stores/canvasStore';
 import { CanvasObjectComponent } from './CanvasObject';
 import { Toolbar } from './Toolbar';
 import { YouTubeOverlay } from './YouTubeOverlay';
 import { DropZone } from './DropZone';
+import { TextEditor } from './TextEditor';
 import { canvasApi } from '../services/canvasApi';
 import { ViewportBounds, ObjectType, CreateObjectRequest } from '../types';
 
-// Helper to extract YouTube video ID
+// Helper to extract YouTube video ID (supports regular videos and Shorts)
 const extractYouTubeId = (url: string): string | null => {
+  // Support for various YouTube URL formats including Shorts
+  // Using non-capturing groups (?:...) to keep video ID at index 1
   const regExp =
-    /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    /^.*(?:youtu\.be\/|v\/|\/u\/\w\/|embed\/|shorts\/|watch\?v=)([^#&?]*).*/;
   const match = url.match(regExp);
-  return match && match[7].length === 11 ? match[7] : null;
+  return match && match[1] && match[1].length === 11 ? match[1] : null;
 };
 
 const STAGE_WIDTH = window.innerWidth;
 const STAGE_HEIGHT = window.innerHeight;
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 5;
+const GRID_SIZE = 50; // Grid cell size in pixels
 
 export const InfiniteCanvas = () => {
   const stageRef = useRef<Konva.Stage>(null);
@@ -29,12 +33,24 @@ export const InfiniteCanvas = () => {
     height: STAGE_HEIGHT,
   });
 
-  const [playingVideo, setPlayingVideo] = useState<{
+  const [playingVideos, setPlayingVideos] = useState<Array<{
+    id: string; // Unique ID for each playing instance
     videoId: string;
     canvasX: number; // Canvas coordinates
     canvasY: number;
     width: number;
     height: number;
+  }>>([]);
+
+  const [editingText, setEditingText] = useState<{
+    id: number;
+    text: string;
+    fontSize: number;
+    fontWeight: string;
+    textColor: string;
+    canvasX: number; // Canvas coordinates
+    canvasY: number;
+    width: number; // Object width in canvas coordinates
   } | null>(null);
 
   const {
@@ -48,6 +64,8 @@ export const InfiniteCanvas = () => {
     setSelectedObjectId,
     isLoading,
     setIsLoading,
+    showGrid,
+    toggleGrid,
   } = useCanvasStore();
 
   // Handle window resize
@@ -287,13 +305,16 @@ export const InfiniteCanvas = () => {
 
     const request: CreateObjectRequest = {
       objectType: ObjectType.TEXT,
-      contentUrl: 'Double click to edit text',
+      contentUrl: 'Click to edit text',
       positionX: centerX - 100,
       positionY: centerY - 25,
       width: 200,
       height: 50,
       zIndex: objects.length,
       userId: 1, // TODO: Replace with actual user ID
+      fontSize: 16,
+      fontWeight: 'normal',
+      textColor: '#333333',
     };
 
     try {
@@ -366,23 +387,66 @@ export const InfiniteCanvas = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedObjectId]);
 
-  // Handle text object updates
+  // Show text editor when a text object is selected
   useEffect(() => {
-    const handleUpdateText = async (e: CustomEvent) => {
-      const { id, text } = e.detail;
-      try {
-        const updated = await canvasApi.updateObject(id, {
-          contentUrl: text,
-        });
-        updateObject(id, updated);
-      } catch (error) {
-        console.error('Failed to update text:', error);
-      }
-    };
+    if (selectedObjectId === null) {
+      // Close text editor when deselecting
+      setEditingText(null);
+      return;
+    }
 
-    window.addEventListener('updateObjectText', handleUpdateText as EventListener);
-    return () => window.removeEventListener('updateObjectText', handleUpdateText as EventListener);
-  }, []);
+    const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+
+    // Only open editor for TEXT objects
+    if (selectedObject && selectedObject.objectType === ObjectType.TEXT) {
+      setEditingText({
+        id: selectedObject.id,
+        text: selectedObject.contentUrl,
+        fontSize: selectedObject.fontSize || 16,
+        fontWeight: selectedObject.fontWeight || 'normal',
+        textColor: selectedObject.textColor || '#333333',
+        canvasX: selectedObject.positionX,
+        canvasY: selectedObject.positionY,
+        width: selectedObject.width,
+      });
+    } else {
+      // Close editor if non-text object is selected
+      setEditingText(null);
+    }
+  }, [selectedObjectId, objects]);
+
+  // Remove a playing video by ID
+  const removeVideo = (id: string) => {
+    setPlayingVideos((prev) => prev.filter((video) => video.id !== id));
+  };
+
+  // Handle text editor save
+  const handleTextSave = async (text: string, fontSize: number, fontWeight: string, textColor: string) => {
+    if (!editingText) return;
+
+    try {
+      const updated = await canvasApi.updateObject(editingText.id, {
+        contentUrl: text,
+        fontSize,
+        fontWeight,
+        textColor,
+      });
+      updateObject(editingText.id, updated);
+      // Deselect to close the editor and prevent it from reopening
+      setSelectedObjectId(null);
+      setEditingText(null);
+    } catch (error) {
+      console.error('Failed to update text:', error);
+      alert('Failed to save text. Please try again.');
+    }
+  };
+
+  // Handle text editor cancel
+  const handleTextCancel = () => {
+    // Deselect to close the editor
+    setSelectedObjectId(null);
+    setEditingText(null);
+  };
 
   // Handle YouTube video play
   useEffect(() => {
@@ -390,20 +454,72 @@ export const InfiniteCanvas = () => {
       const { url, position, size } = e.detail;
       const videoId = extractYouTubeId(url);
       if (videoId) {
-        // Store canvas coordinates - YouTubeOverlay will track stage position in real-time
-        setPlayingVideo({
-          videoId,
-          canvasX: position.x,
-          canvasY: position.y,
-          width: size.width,
-          height: size.height,
-        });
+        // Generate unique ID for this playing instance
+        const uniqueId = `${videoId}-${Date.now()}-${Math.random()}`;
+
+        // Add to playing videos array - allows multiple videos to play simultaneously
+        setPlayingVideos((prev) => [
+          ...prev,
+          {
+            id: uniqueId,
+            videoId,
+            canvasX: position.x,
+            canvasY: position.y,
+            width: size.width,
+            height: size.height,
+          },
+        ]);
       }
     };
 
     window.addEventListener('playYouTubeVideo', handlePlayVideo as EventListener);
     return () => window.removeEventListener('playYouTubeVideo', handlePlayVideo as EventListener);
   }, []);
+
+  // Generate grid lines
+  const generateGridLines = () => {
+    if (!stageRef.current) return [];
+
+    const stage = stageRef.current;
+    const scale = stage.scaleX();
+    const stagePos = stage.position();
+
+    // Calculate viewport bounds in canvas coordinates
+    const startX = Math.floor((-stagePos.x / scale) / GRID_SIZE) * GRID_SIZE;
+    const endX = Math.ceil((-stagePos.x / scale + dimensions.width / scale) / GRID_SIZE) * GRID_SIZE;
+    const startY = Math.floor((-stagePos.y / scale) / GRID_SIZE) * GRID_SIZE;
+    const endY = Math.ceil((-stagePos.y / scale + dimensions.height / scale) / GRID_SIZE) * GRID_SIZE;
+
+    const lines = [];
+
+    // Vertical lines
+    for (let x = startX; x <= endX; x += GRID_SIZE) {
+      lines.push(
+        <Line
+          key={`v-${x}`}
+          points={[x, startY, x, endY]}
+          stroke="#e0e0e0"
+          strokeWidth={1 / scale}
+          listening={false}
+        />
+      );
+    }
+
+    // Horizontal lines
+    for (let y = startY; y <= endY; y += GRID_SIZE) {
+      lines.push(
+        <Line
+          key={`h-${y}`}
+          points={[startX, y, endX, y]}
+          stroke="#e0e0e0"
+          strokeWidth={1 / scale}
+          listening={false}
+        />
+      );
+    }
+
+    return lines;
+  };
 
 
   return (
@@ -417,6 +533,8 @@ export const InfiniteCanvas = () => {
         onAddImage={handleAddImageFromToolbar}
         onDeleteSelected={handleDeleteSelected}
         hasSelection={selectedObjectId !== null}
+        showGrid={showGrid}
+        onToggleGrid={toggleGrid}
       />
       <Stage
         ref={stageRef}
@@ -432,6 +550,14 @@ export const InfiniteCanvas = () => {
         onClick={handleStageClick}
         onTap={handleStageClick}
       >
+        {/* Grid Layer (Background) */}
+        {showGrid && (
+          <Layer listening={false}>
+            {generateGridLines()}
+          </Layer>
+        )}
+
+        {/* Objects Layer */}
         <Layer>
           {objects.map((obj) => (
             <CanvasObjectComponent
@@ -461,15 +587,31 @@ export const InfiniteCanvas = () => {
         </div>
       )}
 
-      {playingVideo && (
+      {playingVideos.map((video) => (
         <YouTubeOverlay
-          videoId={playingVideo.videoId}
-          canvasX={playingVideo.canvasX}
-          canvasY={playingVideo.canvasY}
-          width={playingVideo.width}
-          height={playingVideo.height}
+          key={video.id}
+          videoId={video.videoId}
+          canvasX={video.canvasX}
+          canvasY={video.canvasY}
+          width={video.width}
+          height={video.height}
           stageRef={stageRef}
-          onClose={() => setPlayingVideo(null)}
+          onClose={() => removeVideo(video.id)}
+        />
+      ))}
+
+      {editingText && (
+        <TextEditor
+          initialText={editingText.text}
+          initialFontSize={editingText.fontSize}
+          initialFontWeight={editingText.fontWeight}
+          initialTextColor={editingText.textColor}
+          canvasX={editingText.canvasX}
+          canvasY={editingText.canvasY}
+          objectWidth={editingText.width}
+          stageRef={stageRef}
+          onSave={handleTextSave}
+          onCancel={handleTextCancel}
         />
       )}
       </div>

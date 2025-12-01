@@ -37,7 +37,8 @@
       "Bash(then echo \"exists\")",
       "Bash(else echo \"not exists\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(dir /B /A)"
     ],
     "deny": [],
     "ask": []

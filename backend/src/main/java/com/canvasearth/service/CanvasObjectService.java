@@ -63,6 +63,9 @@ public class CanvasObjectService {
                 .width(request.getWidth())
                 .height(request.getHeight())
                 .zIndex(request.getZIndex() != null ? request.getZIndex() : 0)
+                .fontSize(request.getFontSize())
+                .fontWeight(request.getFontWeight())
+                .textColor(request.getTextColor())
                 .user(user)
                 .build();
 
@@ -95,6 +98,15 @@ public class CanvasObjectService {
         }
         if (request.getContentUrl() != null) {
             object.setContentUrl(request.getContentUrl());
+        }
+        if (request.getFontSize() != null) {
+            object.setFontSize(request.getFontSize());
+        }
+        if (request.getFontWeight() != null) {
+            object.setFontWeight(request.getFontWeight());
+        }
+        if (request.getTextColor() != null) {
+            object.setTextColor(request.getTextColor());
         }
 
         CanvasObject updated = canvasObjectRepository.save(object);

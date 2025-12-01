@@ -33,4 +33,9 @@ public class CanvasObjectRequest {
     private Integer zIndex;
 
     private Long userId;
+
+    // Text styling properties
+    private Integer fontSize;
+    private String fontWeight;
+    private String textColor;
 }

@@ -27,6 +27,11 @@ public class CanvasObjectResponse {
     private String username;
     private LocalDateTime createdAt;
 
+    // Text styling properties
+    private Integer fontSize;
+    private String fontWeight;
+    private String textColor;
+
     public static CanvasObjectResponse fromEntity(CanvasObject object) {
         return CanvasObjectResponse.builder()
                 .id(object.getId())
@@ -37,6 +42,9 @@ public class CanvasObjectResponse {
                 .width(object.getWidth())
                 .height(object.getHeight())
                 .zIndex(object.getZIndex())
+                .fontSize(object.getFontSize())
+                .fontWeight(object.getFontWeight())
+                .textColor(object.getTextColor())
                 .userId(object.getUser() != null ? object.getUser().getId() : null)
                 .username(object.getUser() != null ? object.getUser().getUsername() : null)
                 .createdAt(object.getCreatedAt())

@@ -26,12 +26,18 @@ const TextObject = ({
   height,
   isEditing,
   onTextChange,
+  fontSize = 16,
+  fontWeight = 'normal',
+  textColor = '#333',
 }: {
   text: string;
   width: number;
   height: number;
   isEditing: boolean;
   onTextChange?: (text: string) => void;
+  fontSize?: number;
+  fontWeight?: string;
+  textColor?: string;
 }) => {
   if (isEditing && onTextChange) {
     // In edit mode - show HTML input (handled by parent)
@@ -41,23 +47,26 @@ const TextObject = ({
   return (
     <Text
       text={text}
-      fontSize={16}
+      fontSize={fontSize}
+      fontStyle={fontWeight}
       width={width}
       height={height}
       align="left"
       verticalAlign="top"
       padding={10}
-      fill="#333"
+      fill={textColor}
     />
   );
 };
 
-// Extract YouTube video ID from URL
+// Extract YouTube video ID from URL (supports regular videos and Shorts)
 const extractYouTubeId = (url: string): string | null => {
+  // Support for various YouTube URL formats including Shorts
+  // Using non-capturing groups (?:...) to keep video ID at index 1
   const regExp =
-    /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    /^.*(?:youtu\.be\/|v\/|\/u\/\w\/|embed\/|shorts\/|watch\?v=)([^#&?]*).*/;
   const match = url.match(regExp);
-  return match && match[7].length === 11 ? match[7] : null;
+  return match && match[1] && match[1].length === 11 ? match[1] : null;
 };
 
 // YouTube embed component with thumbnail
@@ -157,16 +166,7 @@ export const CanvasObjectComponent = ({
   };
 
   const handleDoubleClick = () => {
-    if (object.objectType === ObjectType.TEXT) {
-      const newText = prompt('Edit text:', object.contentUrl);
-      if (newText !== null && newText !== object.contentUrl) {
-        onTransformEnd(object.width, object.height);
-        // Trigger update with new text
-        window.dispatchEvent(new CustomEvent('updateObjectText', {
-          detail: { id: object.id, text: newText }
-        }));
-      }
-    } else if (object.objectType === ObjectType.YOUTUBE) {
+    if (object.objectType === ObjectType.YOUTUBE) {
       // Play YouTube video in overlay
       window.dispatchEvent(new CustomEvent('playYouTubeVideo', {
         detail: {
@@ -176,6 +176,7 @@ export const CanvasObjectComponent = ({
         }
       }));
     }
+    // Text editing is now handled by selection (single click) in InfiniteCanvas
   };
 
   const renderContent = () => {
@@ -195,6 +196,9 @@ export const CanvasObjectComponent = ({
             width={object.width}
             height={object.height}
             isEditing={isEditing}
+            fontSize={object.fontSize}
+            fontWeight={object.fontWeight}
+            textColor={object.textColor}
           />
         );
       case ObjectType.YOUTUBE:

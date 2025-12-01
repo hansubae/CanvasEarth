@@ -6,6 +6,8 @@ interface ToolbarProps {
   onAddImage: (file: File) => void;
   onDeleteSelected: () => void;
   hasSelection: boolean;
+  showGrid: boolean;
+  onToggleGrid: () => void;
 }
 
 export const Toolbar = ({
@@ -14,6 +16,8 @@ export const Toolbar = ({
   onAddImage,
   onDeleteSelected,
   hasSelection,
+  showGrid,
+  onToggleGrid,
 }: ToolbarProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -107,6 +111,36 @@ export const Toolbar = ({
                   onChange={handleImageUpload}
                 />
               </label>
+            </div>
+
+            {/* View Options */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-gray-200">
+              <h4 className="text-xs text-gray-500 uppercase tracking-wide">
+                View
+              </h4>
+              <button
+                onClick={onToggleGrid}
+                className={`flex items-center gap-2 px-4 py-2 rounded transition-colors text-sm ${
+                  showGrid
+                    ? 'bg-purple-500 text-white hover:bg-purple-600'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+                  />
+                </svg>
+                {showGrid ? 'Hide Grid' : 'Show Grid'}
+              </button>
             </div>
 
             {/* Delete Button */}

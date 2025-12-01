@@ -42,6 +42,16 @@ public class CanvasObject {
     @Column(name = "z_index", nullable = false)
     private Integer zIndex;
 
+    // Text styling properties
+    @Column(name = "font_size")
+    private Integer fontSize;
+
+    @Column(name = "font_weight")
+    private String fontWeight;
+
+    @Column(name = "text_color")
+    private String textColor;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;

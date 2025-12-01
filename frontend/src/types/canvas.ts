@@ -18,6 +18,10 @@ export interface CanvasObject {
   zIndex: number;
   userId: number;
   createdAt: string;
+  // Text styling properties
+  fontSize?: number;
+  fontWeight?: string;
+  textColor?: string;
 }
 
 // Request DTO for creating new objects
@@ -30,6 +34,10 @@ export interface CreateObjectRequest {
   height: number;
   zIndex: number;
   userId: number;
+  // Text styling properties
+  fontSize?: number;
+  fontWeight?: string;
+  textColor?: string;
 }
 
 // Request DTO for updating objects
@@ -40,6 +48,10 @@ export interface UpdateObjectRequest {
   height?: number;
   zIndex?: number;
   contentUrl?: string;
+  // Text styling properties
+  fontSize?: number;
+  fontWeight?: string;
+  textColor?: string;
 }
 
 // Viewport bounds for fetching visible objects

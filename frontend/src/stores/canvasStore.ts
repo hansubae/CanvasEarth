@@ -20,6 +20,10 @@ interface CanvasStore {
   // Loading state
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+
+  // Grid display
+  showGrid: boolean;
+  toggleGrid: () => void;
 }
 
 const INITIAL_CANVAS_STATE: CanvasState = {
@@ -53,4 +57,7 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
 
   isLoading: false,
   setIsLoading: (loading) => set({ isLoading: loading }),
+
+  showGrid: true,
+  toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
 }));

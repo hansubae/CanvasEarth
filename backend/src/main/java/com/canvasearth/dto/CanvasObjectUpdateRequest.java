@@ -22,4 +22,9 @@ public class CanvasObjectUpdateRequest {
     private Integer zIndex;
 
     private String contentUrl;
+
+    // Text styling properties
+    private Integer fontSize;
+    private String fontWeight;
+    private String textColor;
 }
