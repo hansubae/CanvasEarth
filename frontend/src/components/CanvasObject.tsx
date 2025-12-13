@@ -170,9 +170,8 @@ export const CanvasObjectComponent = ({
       // Play YouTube video in overlay
       window.dispatchEvent(new CustomEvent('playYouTubeVideo', {
         detail: {
+          objectId: object.id,
           url: object.contentUrl,
-          position: { x: object.positionX, y: object.positionY },
-          size: { width: object.width, height: object.height }
         }
       }));
     }
@@ -222,6 +221,7 @@ export const CanvasObjectComponent = ({
         y={object.positionY}
         width={object.width}
         height={object.height}
+        objectId={object.id}
         draggable
         onClick={onSelect}
         onTap={onSelect}
@@ -233,14 +233,26 @@ export const CanvasObjectComponent = ({
       >
         {renderContent()}
       </Group>
-      {isSelected && !isDragging && (
+      {isSelected && (
         <Transformer
           ref={transformerRef}
+          ignoreStroke={true}
           boundBoxFunc={(oldBox, newBox) => {
             // Limit minimum size
             if (newBox.width < 5 || newBox.height < 5) {
               return oldBox;
             }
+
+            // Limit maximum size for YouTube objects to prevent sync issues
+            if (object.objectType === ObjectType.YOUTUBE) {
+              const MAX_WIDTH = 1920;
+              const MAX_HEIGHT = 1080;
+
+              if (newBox.width > MAX_WIDTH || newBox.height > MAX_HEIGHT) {
+                return oldBox;
+              }
+            }
+
             return newBox;
           }}
         />

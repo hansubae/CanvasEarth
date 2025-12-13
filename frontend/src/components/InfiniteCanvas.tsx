@@ -35,11 +35,8 @@ export const InfiniteCanvas = () => {
 
   const [playingVideos, setPlayingVideos] = useState<Array<{
     id: string; // Unique ID for each playing instance
+    objectId: number; // Reference to the canvas object
     videoId: string;
-    canvasX: number; // Canvas coordinates
-    canvasY: number;
-    width: number;
-    height: number;
   }>>([]);
 
   const [editingText, setEditingText] = useState<{
@@ -155,11 +152,14 @@ export const InfiniteCanvas = () => {
 
   // Handle stage drag (panning)
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-    setCanvasState({
-      ...canvasState,
-      x: e.target.x(),
-      y: e.target.y(),
-    });
+    // Only update canvas state if dragging the stage itself, not objects
+    if (e.target === stageRef.current) {
+      setCanvasState({
+        ...canvasState,
+        x: e.target.x(),
+        y: e.target.y(),
+      });
+    }
   };
 
   // Handle object drag
@@ -451,7 +451,7 @@ export const InfiniteCanvas = () => {
   // Handle YouTube video play
   useEffect(() => {
     const handlePlayVideo = (e: CustomEvent) => {
-      const { url, position, size } = e.detail;
+      const { objectId, url } = e.detail;
       const videoId = extractYouTubeId(url);
       if (videoId) {
         // Generate unique ID for this playing instance
@@ -462,11 +462,8 @@ export const InfiniteCanvas = () => {
           ...prev,
           {
             id: uniqueId,
+            objectId,
             videoId,
-            canvasX: position.x,
-            canvasY: position.y,
-            width: size.width,
-            height: size.height,
           },
         ]);
       }
@@ -591,10 +588,7 @@ export const InfiniteCanvas = () => {
         <YouTubeOverlay
           key={video.id}
           videoId={video.videoId}
-          canvasX={video.canvasX}
-          canvasY={video.canvasY}
-          width={video.width}
-          height={video.height}
+          objectId={video.objectId}
           stageRef={stageRef}
           onClose={() => removeVideo(video.id)}
         />

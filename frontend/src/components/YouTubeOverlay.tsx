@@ -3,20 +3,14 @@ import Konva from 'konva';
 
 interface YouTubeOverlayProps {
   videoId: string;
-  canvasX: number; // Canvas X coordinate
-  canvasY: number; // Canvas Y coordinate
-  width: number;
-  height: number;
+  objectId: number; // Canvas object ID to track in real-time
   stageRef: React.RefObject<Konva.Stage>;
   onClose: () => void;
 }
 
 export const YouTubeOverlay = ({
   videoId,
-  canvasX,
-  canvasY,
-  width,
-  height,
+  objectId,
   stageRef,
   onClose,
 }: YouTubeOverlayProps) => {
@@ -25,6 +19,7 @@ export const YouTubeOverlay = ({
 
   // Update screen position in real-time by directly manipulating DOM
   // This avoids React re-render cycle and eliminates lag
+  // Tracks the actual Konva object node for real-time position/size updates
   useEffect(() => {
     const overlay = overlayRef.current;
     if (!overlay) return;
@@ -37,16 +32,46 @@ export const YouTubeOverlay = ({
         const scale = stage.scaleX();
         const stagePos = stage.position();
 
-        const screenX = canvasX * scale + stagePos.x;
-        const screenY = canvasY * scale + stagePos.y;
-        const screenWidth = width * scale;
-        const screenHeight = height * scale;
+        // Find the actual Konva object node by searching all layers
+        let targetNode: Konva.Group | null = null;
+        const layers = stage.getLayers();
 
-        // Direct DOM manipulation - no React state, no re-render lag
-        overlay.style.left = `${screenX}px`;
-        overlay.style.top = `${screenY}px`;
-        overlay.style.width = `${screenWidth}px`;
-        overlay.style.height = `${screenHeight}px`;
+        for (const layer of layers) {
+          // Find the Group node that matches our objectId
+          // The node has a custom 'objectId' attribute we need to set in CanvasObject
+          const found = layer.find((node) => {
+            return node.attrs.objectId === objectId;
+          })[0] as Konva.Group | undefined;
+
+          if (found) {
+            targetNode = found;
+            break;
+          }
+        }
+
+        if (targetNode) {
+          // Get real-time position and size from the actual Konva node
+          const canvasX = targetNode.x();
+          const canvasY = targetNode.y();
+
+          // During transform, scaleX/scaleY change but width/height don't
+          // We need to consider both to get the actual size
+          const nodeScaleX = targetNode.scaleX();
+          const nodeScaleY = targetNode.scaleY();
+          const width = targetNode.width() * nodeScaleX;
+          const height = targetNode.height() * nodeScaleY;
+
+          const screenX = canvasX * scale + stagePos.x;
+          const screenY = canvasY * scale + stagePos.y;
+          const screenWidth = width * scale;
+          const screenHeight = height * scale;
+
+          // Direct DOM manipulation - no React state, no re-render lag
+          overlay.style.left = `${screenX}px`;
+          overlay.style.top = `${screenY}px`;
+          overlay.style.width = `${screenWidth}px`;
+          overlay.style.height = `${screenHeight}px`;
+        }
       }
 
       animationFrameId = requestAnimationFrame(updatePosition);
@@ -59,7 +84,7 @@ export const YouTubeOverlay = ({
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [canvasX, canvasY, width, height, stageRef, isFullscreen]);
+  }, [objectId, stageRef, isFullscreen]);
 
   // Close on escape key
   useEffect(() => {
@@ -89,6 +114,7 @@ export const YouTubeOverlay = ({
           borderRadius: '8px',
           overflow: 'hidden',
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8)',
+          pointerEvents: 'none', // Allow clicks to pass through to canvas
           // Remove transition to avoid lag
           ...(isFullscreen && {
             left: '50%',
@@ -108,6 +134,7 @@ export const YouTubeOverlay = ({
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
+          style={{ pointerEvents: 'auto' }} // Enable clicks on iframe
         />
 
         {/* Control buttons */}
@@ -119,6 +146,7 @@ export const YouTubeOverlay = ({
             display: 'flex',
             gap: '8px',
             zIndex: 1002,
+            pointerEvents: 'auto', // Enable clicks on buttons
           }}
         >
           {/* Fullscreen toggle */}
