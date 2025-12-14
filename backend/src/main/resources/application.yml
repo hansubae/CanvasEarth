@@ -27,7 +27,7 @@ spring:
   # CORS Configuration
   web:
     cors:
-      allowed-origins: "http://localhost:5173"
+      allowed-origins: "*"
       allowed-methods: "*"
       allowed-headers: "*"
       allow-credentials: true
