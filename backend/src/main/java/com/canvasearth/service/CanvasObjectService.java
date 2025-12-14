@@ -31,13 +31,21 @@ public class CanvasObjectService {
     private final UserRepository userRepository;
 
     /**
-     * Get all objects within the viewport bounds
+     * Get all objects within the viewport bounds.
+     * If viewport parameters are null, returns all objects.
      */
     public List<CanvasObjectResponse> getObjectsInViewport(
             Double minX, Double minY, Double maxX, Double maxY) {
 
-        List<CanvasObject> objects = canvasObjectRepository
-                .findObjectsInViewport(minX, minY, maxX, maxY);
+        List<CanvasObject> objects;
+
+        // If any parameter is null, return all objects
+        if (minX == null || minY == null || maxX == null || maxY == null) {
+            objects = canvasObjectRepository.findAll();
+        } else {
+            objects = canvasObjectRepository
+                    .findObjectsInViewport(minX, minY, maxX, maxY);
+        }
 
         return objects.stream()
                 .map(CanvasObjectResponse::fromEntity)

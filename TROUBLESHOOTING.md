@@ -466,3 +466,265 @@ const [isDragging, setIsDragging] = useState(false);
 6. **Konva 이벤트 시스템**: cancelBubble만으로는 부족할 수 있으며, 명시적 타겟 검증 필요
 
 ---
+
+## 2025-12-14: GCP 배포 후 500 에러 (API 연결 실패 및 CORS 문제)
+
+### 📋 문제 상황
+- GCP Compute Engine에 Docker로 배포 완료
+- 프론트엔드 페이지는 로드되지만 500 에러 발생
+- Chrome 개발자 도구 Network 탭에서 모든 API 호출 실패 (500 Internal Server Error)
+- 브라우저 콘솔에 GET 에러 발생
+
+### 🔍 원인 분석
+
+#### 1. 프론트엔드 환경 변수 문제
+**파일**: `.env` (line 7)
+```env
+VITE_API_URL=http://localhost:8080  ❌
+```
+
+**문제점:**
+- Vite 빌드 시점에 환경 변수가 번들에 포함됨
+- 브라우저는 `localhost:8080`을 **사용자의 로컬 컴퓨터**로 인식
+- GCP VM의 백엔드 서버 주소가 아님
+- API 호출이 사용자의 로컬호스트로 전송되어 실패
+
+#### 2. 백엔드 CORS 설정 문제
+**파일**: `backend/src/main/resources/application.yml` (line 30)
+```yaml
+# CORS Configuration
+web:
+  cors:
+    allowed-origins: "http://localhost:5173"  ❌
+```
+
+**문제점:**
+- CORS는 프론트엔드가 실행되는 origin을 검증
+- `http://localhost:5173`만 허용
+- GCP VM의 외부 IP(예: `http://34.64.123.45:5173`)에서 접근하면 CORS 거부
+- 백엔드가 모든 요청을 차단함
+
+#### 3. 에러 발생 시나리오
+```
+1. 사용자: http://34.64.123.45:5173 접속
+2. 프론트엔드: HTML/JS 로드 성공 ✅
+3. 프론트엔드: VITE_API_URL = "http://localhost:8080"
+4. API 호출: fetch("http://localhost:8080/api/objects")
+5. 브라우저: 사용자의 로컬 컴퓨터:8080으로 요청 전송
+6. 결과: Connection refused 또는 500 에러 ❌
+```
+
+만약 프론트엔드 URL을 올바르게 설정했어도:
+```
+1. API 호출: fetch("http://34.64.123.45:8080/api/objects")
+2. 백엔드: Origin 확인 = "http://34.64.123.45:5173"
+3. CORS 설정: allowed-origins = "http://localhost:5173"
+4. 백엔드: Origin 불일치 → CORS 에러 ❌
+5. 응답: 403 Forbidden 또는 500 에러
+```
+
+### ✅ 해결 방법
+
+#### 1단계: GCP VM 외부 IP 확인
+```bash
+# SSH로 GCP VM 접속
+gcloud compute ssh canvasearth-vm --zone=asia-northeast3-a
+
+# 외부 IP 확인
+curl ifconfig.me
+```
+
+예시 출력: `34.64.123.45`
+
+#### 2단계: `.env` 파일 수정
+```bash
+cd ~/CanvasEarth
+nano .env
+```
+
+수정 내용:
+```env
+# Database Configuration
+POSTGRES_DB=canvasearth
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+
+# Frontend Configuration
+VITE_API_URL=http://34.64.123.45:8080  # ✅ VM 외부 IP로 변경
+```
+
+#### 3단계: `application.yml` CORS 설정 수정
+```bash
+cd ~/CanvasEarth/backend/src/main/resources
+nano application.yml
+```
+
+**옵션 1 - 모든 origin 허용 (개발/테스트용):**
+```yaml
+  # CORS Configuration
+  web:
+    cors:
+      allowed-origins: "*"  # ✅ 모든 origin 허용
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+```
+
+**옵션 2 - 특정 IP만 허용 (프로덕션 권장):**
+```yaml
+  # CORS Configuration
+  web:
+    cors:
+      allowed-origins: "http://34.64.123.45:5173"  # ✅ VM IP로 변경
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+```
+
+**옵션 3 - 환경 변수로 관리 (최고 권장):**
+```yaml
+  # CORS Configuration
+  web:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+```
+
+그리고 `docker-compose.yml`의 backend 섹션에 환경 변수 추가:
+```yaml
+  backend:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-canvasearth}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      CORS_ALLOWED_ORIGINS: "http://34.64.123.45:5173"  # ✅ 추가
+```
+
+#### 4단계: 방화벽 규칙 확인 (백엔드 포트 8080)
+```bash
+# 방화벽 규칙 확인
+gcloud compute firewall-rules list | grep 8080
+
+# 없다면 추가
+gcloud compute firewall-rules create allow-canvasearth-backend \
+    --allow tcp:8080 \
+    --source-ranges 0.0.0.0/0 \
+    --description="Allow CanvasEarth Backend API"
+```
+
+#### 5단계: Docker 컨테이너 재빌드
+```bash
+cd ~/CanvasEarth
+
+# 기존 컨테이너 중지 및 삭제
+docker compose down
+
+# 재빌드 및 실행
+docker compose up -d --build
+
+# 빌드 진행 상황 확인
+docker compose logs -f
+```
+
+#### 6단계: 로그 확인
+```bash
+# 백엔드 로그 확인
+docker compose logs -f backend
+
+# 다음 메시지 확인:
+# - "Started CanvasEarthBackendApplication"
+# - 에러 메시지가 없는지 확인
+
+# 프론트엔드 로그 확인
+docker compose logs -f frontend
+```
+
+#### 7단계: 컨테이너 상태 확인
+```bash
+docker compose ps
+```
+
+모든 컨테이너가 `Up` 상태여야 함:
+```
+NAME                    STATUS
+canvasearth-backend     Up
+canvasearth-frontend    Up
+canvasearth-db          Up
+```
+
+#### 8단계: 백엔드 API 직접 테스트
+```bash
+# VM 내부에서 테스트
+curl http://localhost:8080/api/objects
+
+# 로컬 PC에서 테스트 (PowerShell)
+Invoke-WebRequest http://34.64.123.45:8080/api/objects
+```
+
+정상 응답: `[]` 또는 오브젝트 배열
+
+#### 9단계: 브라우저에서 테스트
+```
+http://34.64.123.45:5173
+```
+
+Chrome 개발자 도구 (F12) → Network 탭에서:
+- `api/objects` 요청이 200 OK로 성공하는지 확인
+- Response 데이터 확인
+
+### 📁 수정된 파일
+- `.env` (line 7)
+  - `VITE_API_URL`: `localhost` → VM 외부 IP로 변경
+
+- `backend/src/main/resources/application.yml` (line 30)
+  - `allowed-origins`: 와일드카드(`*`) 또는 VM IP로 변경
+
+- `docker-compose.yml` (선택사항)
+  - backend 환경 변수에 `CORS_ALLOWED_ORIGINS` 추가
+
+### 🧪 테스트 결과
+- ✅ 프론트엔드 페이지 로드 성공
+- ✅ API 호출 성공 (200 OK)
+- ✅ 오브젝트 CRUD 작동
+- ✅ CORS 에러 없음
+- ✅ Network 탭에서 모든 요청 성공
+
+### 📚 교훈
+1. **Vite 환경 변수**: 빌드 시점에 번들에 포함되므로, 배포 환경에 맞게 `.env` 파일 수정 필수
+2. **localhost의 의미**: 브라우저에서 `localhost`는 서버가 아닌 **사용자의 컴퓨터**를 의미
+3. **CORS 설정**: 프론트엔드가 실행되는 origin(도메인+포트)과 일치해야 함
+4. **환경별 설정 관리**:
+   - 로컬 개발: `localhost`
+   - GCP 배포: VM 외부 IP
+   - 프로덕션: 도메인 이름
+5. **Docker 재빌드 필요성**: 환경 변수나 소스 코드 변경 시 `--build` 플래그로 재빌드 필수
+6. **방화벽 규칙**: 프론트엔드(5173)뿐만 아니라 백엔드(8080) 포트도 열어야 함
+
+### 💡 프로덕션 권장 설정
+
+#### 1. 도메인 사용
+고정 IP 대신 도메인 이름 사용:
+```env
+VITE_API_URL=https://api.canvasearth.com
+```
+
+#### 2. HTTPS 적용
+- GCP Load Balancer + SSL 인증서
+- 또는 Nginx 리버스 프록시 + Let's Encrypt
+
+#### 3. 환경별 `.env` 파일
+```
+.env.development    # 로컬 개발
+.env.staging        # 스테이징
+.env.production     # 프로덕션
+```
+
+#### 4. 보안 강화
+- CORS: 특정 도메인만 허용
+- PostgreSQL 비밀번호 강화
+- 백엔드 포트(8080) 외부 노출 제거 (내부 네트워크만)
+- Nginx 리버스 프록시로 프론트엔드만 외부 노출
+
+---

@@ -27,12 +27,12 @@ public class CanvasObjectController {
 
     @GetMapping
     @Operation(summary = "Get objects in viewport",
-               description = "Retrieve all canvas objects within the specified viewport bounds")
+               description = "Retrieve all canvas objects within the specified viewport bounds. If no parameters are provided, returns all objects.")
     public ResponseEntity<List<CanvasObjectResponse>> getObjectsInViewport(
-            @Parameter(description = "Minimum X coordinate") @RequestParam Double minX,
-            @Parameter(description = "Minimum Y coordinate") @RequestParam Double minY,
-            @Parameter(description = "Maximum X coordinate") @RequestParam Double maxX,
-            @Parameter(description = "Maximum Y coordinate") @RequestParam Double maxY) {
+            @Parameter(description = "Minimum X coordinate") @RequestParam(required = false) Double minX,
+            @Parameter(description = "Minimum Y coordinate") @RequestParam(required = false) Double minY,
+            @Parameter(description = "Maximum X coordinate") @RequestParam(required = false) Double maxX,
+            @Parameter(description = "Maximum Y coordinate") @RequestParam(required = false) Double maxY) {
 
         List<CanvasObjectResponse> objects = canvasObjectService
                 .getObjectsInViewport(minX, minY, maxX, maxY);
