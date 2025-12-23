@@ -9,7 +9,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "canvas_objects")
+@Table(name = "canvas_objects",
+       indexes = {
+           @Index(name = "idx_position_x", columnList = "position_x"),
+           @Index(name = "idx_position_y", columnList = "position_y"),
+           @Index(name = "idx_z_index_created", columnList = "z_index, created_at")
+       })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

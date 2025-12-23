@@ -10,12 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@stomp/stompjs": "^7.0.0",
+    "@stomp/stompjs": "^7.2.1",
     "@tanstack/react-query": "^5.17.9",
     "axios": "^1.6.5",
     "konva": "^9.3.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
     "react-konva": "^18.2.10",
     "sockjs-client": "^1.6.1",
     "use-image": "^1.1.4",

@@ -71,7 +71,12 @@ export const canvasApi = {
     formData.append('zIndex', zIndex.toString());
     formData.append('userId', userId.toString());
 
-    const response = await api.post<CanvasObject>('/objects/upload', formData);
+    // Override Content-Type header for multipart/form-data
+    const response = await api.post<CanvasObject>('/objects/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 };

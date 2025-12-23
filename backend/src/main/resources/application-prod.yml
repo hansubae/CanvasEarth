@@ -1,0 +1,49 @@
+# Production Environment Configuration
+# Activate with: --spring.profiles.active=prod
+
+spring:
+  jpa:
+    hibernate:
+      # Production: Only validate schema, never modify
+      # Use Flyway/Liquibase for schema migrations
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Disable SQL formatting in production
+        format_sql: false
+    # Disable SQL logging in production
+    show-sql: false
+
+  # Production logging - only warnings and errors
+  logging:
+    level:
+      root: WARN
+      com.canvasearth: INFO
+      org.springframework.web: WARN
+      org.hibernate.SQL: WARN
+      org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+# Production server configuration
+server:
+  error:
+    # Hide detailed error messages from clients
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+  # Compression
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+# Actuator - Production (minimal information exposure)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never

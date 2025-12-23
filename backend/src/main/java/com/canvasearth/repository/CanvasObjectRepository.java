@@ -14,6 +14,14 @@ public interface CanvasObjectRepository extends JpaRepository<CanvasObject, Long
     /**
      * Find all objects within the viewport bounds.
      * An object is visible if its bounding box intersects with the viewport.
+     *
+     * Performance Note:
+     * - Current query uses computed expressions (positionX + width)
+     * - Indexes on position_x, position_y help but not optimal
+     * - For large datasets (>10K objects), consider:
+     *   1. Adding computed columns (position_x_max, position_y_max)
+     *   2. Using spatial indexes (PostGIS ST_Intersects)
+     * - Current performance: acceptable for <10K objects
      */
     @Query("SELECT o FROM CanvasObject o " +
            "WHERE o.positionX + o.width >= :minX " +

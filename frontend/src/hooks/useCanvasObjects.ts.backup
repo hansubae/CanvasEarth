@@ -1,5 +1,4 @@
-import { useQuery, useMutation, useQueryClient, hashKey } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { canvasApi } from '../services/canvasApi';
 import {
   ViewportBounds,
@@ -8,57 +7,23 @@ import {
   CanvasObject,
 } from '../types';
 
-// Round viewport bounds to reduce cache misses
-const roundBounds = (bounds: ViewportBounds, gridSize = 500): ViewportBounds => ({
-  minX: Math.floor(bounds.minX / gridSize) * gridSize,
-  minY: Math.floor(bounds.minY / gridSize) * gridSize,
-  maxX: Math.ceil(bounds.maxX / gridSize) * gridSize,
-  maxY: Math.ceil(bounds.maxY / gridSize) * gridSize,
-});
-
 // Query keys
 export const canvasQueryKeys = {
   all: ['canvas-objects'] as const,
-  viewport: (bounds: ViewportBounds) => {
-    const rounded = roundBounds(bounds, 1000);
-    return ['canvas-objects', 'viewport',
-            `${rounded.minX},${rounded.minY},${rounded.maxX},${rounded.maxY}`] as const;
-  },
+  viewport: (bounds: ViewportBounds) =>
+    ['canvas-objects', 'viewport', bounds] as const,
   detail: (id: number) => ['canvas-objects', 'detail', id] as const,
 };
 
 // Hook for fetching objects in viewport
 export const useCanvasObjects = (bounds: ViewportBounds, enabled: boolean = true) => {
-  // Memoize rounded bounds - only recalculate when bounds values change significantly
-  // Using 1000px grid size for better cache hit rate
-  const roundedBounds = useMemo(() => roundBounds(bounds, 1000), [
-    Math.floor(bounds.minX / 1000) * 1000,
-    Math.floor(bounds.minY / 1000) * 1000,
-    Math.ceil(bounds.maxX / 1000) * 1000,
-    Math.ceil(bounds.maxY / 1000) * 1000,
-  ]);
-
-  // Memoize query key to prevent unnecessary re-renders
-  const queryKey = useMemo(() =>
-    canvasQueryKeys.viewport(roundedBounds),
-    [roundedBounds.minX, roundedBounds.minY, roundedBounds.maxX, roundedBounds.maxY]
-  );
-
-  console.log('[useCanvasObjects] Original bounds:', bounds);
-  console.log('[useCanvasObjects] Rounded bounds:', roundedBounds);
-  console.log('[useCanvasObjects] Query key:', queryKey);
-  console.log('[useCanvasObjects] Query key hash:', hashKey(queryKey));
-
   return useQuery({
-    queryKey,
-    queryFn: () => {
-      console.log('[useCanvasObjects] ⚡ FETCHING with bounds:', roundedBounds);
-      return canvasApi.getObjectsInViewport(roundedBounds);
-    },
+    queryKey: canvasQueryKeys.viewport(bounds),
+    queryFn: () => canvasApi.getObjectsInViewport(bounds),
     enabled,
-    staleTime: 30000, // 30 seconds - increased since queries change less frequently with rounding
+    staleTime: 5000, // Consider data fresh for 5 seconds
     refetchOnWindowFocus: false,
-    placeholderData: (previousData) => previousData, // Keep previous data while fetching new data
+    placeholderData: keepPreviousData, // Keep previous data while fetching new data (prevents flickering)
   });
 };
 

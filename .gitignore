@@ -35,6 +35,13 @@ backend/out/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+backend/logs/
 
 # Uploads
 backend/uploads/
+
+# Documentation (exclude from repository)
+CODE_REVIEW.md
+TROUBLESHOOTING.md
+GCP_DEPLOYMENT.md
+FLICKERING_ISSUE.md

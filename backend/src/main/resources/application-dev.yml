@@ -1,0 +1,31 @@
+# Development Environment Configuration
+# Activate with: --spring.profiles.active=dev
+
+spring:
+  jpa:
+    hibernate:
+      # Development: Allow automatic schema updates
+      ddl-auto: update
+    properties:
+      hibernate:
+        # Enable SQL formatting for better readability
+        format_sql: true
+    # Enable SQL logging for debugging
+    show-sql: true
+
+  # Development logging
+  logging:
+    level:
+      root: INFO
+      com.canvasearth: DEBUG
+      org.springframework.web: DEBUG
+      org.hibernate.SQL: DEBUG
+      org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Development server configuration
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always
+    include-exception: true

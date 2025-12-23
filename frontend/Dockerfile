@@ -1,19 +1,36 @@
-# Frontend Dockerfile (개발 모드)
-FROM node:20-alpine
+# Multi-stage production build
+# Stage 1: Build
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# package.json과 package-lock.json 복사
+# Copy package files
 COPY package*.json ./
 
-# 의존성 설치
+# Install dependencies
 RUN npm ci
 
-# 소스 코드 복사
+# Copy source code
 COPY . .
 
-# 포트 노출
-EXPOSE 5173
+# Build argument for API URL
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
 
-# Vite dev server 실행 (호스트 노출)
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Production build
+RUN npm run build
+
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
+
+# Copy built files from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

@@ -69,7 +69,27 @@ CanvasEarth/
 - Node.js 18 or higher
 - Docker & Docker Compose
 
-### 1. Start Database
+### 1. Environment Configuration
+
+Create a `.env` file in the project root by copying the example:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set your configuration (especially `POSTGRES_PASSWORD`):
+
+```bash
+# Required: Set a strong password
+POSTGRES_PASSWORD=your-secure-password-here
+
+# Optional: Customize other settings
+POSTGRES_DB=canvasearth
+POSTGRES_USER=postgres
+VITE_API_URL=http://localhost:8080
+```
+
+### 2. Start Database
 
 ```bash
 docker-compose up -d
@@ -77,7 +97,7 @@ docker-compose up -d
 
 This will start PostgreSQL with PostGIS extension on port 5432.
 
-### 2. Run Backend
+### 3. Run Backend
 
 ```bash
 cd backend
@@ -88,7 +108,7 @@ Backend will run on http://localhost:8080
 
 API Documentation (Swagger): http://localhost:8080/swagger-ui.html
 
-### 3. Run Frontend
+### 4. Run Frontend
 
 ```bash
 cd frontend
@@ -167,10 +187,14 @@ Frontend will run on http://localhost:5173
 - Frontend: 5173
 - PostgreSQL: 5432
 
-### Database Credentials
-- Database: canvasearth
-- Username: postgres
-- Password: postgres
+### Database Configuration
+
+Database credentials are managed through the `.env` file:
+- Database: Set via `POSTGRES_DB` (default: canvasearth)
+- Username: Set via `POSTGRES_USER` (default: postgres)
+- Password: **Required** - Set via `POSTGRES_PASSWORD` in `.env` file
+
+**Security Note**: Never commit `.env` files to version control. Use `.env.example` as a template.
 
 ## License
 

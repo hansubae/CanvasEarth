@@ -39,7 +39,7 @@ export const YouTubeOverlay = ({
         for (const layer of layers) {
           // Find the Group node that matches our objectId
           // The node has a custom 'objectId' attribute we need to set in CanvasObject
-          const found = layer.find((node) => {
+          const found = layer.find((node: Konva.Node) => {
             return node.attrs.objectId === objectId;
           })[0] as Konva.Group | undefined;
 

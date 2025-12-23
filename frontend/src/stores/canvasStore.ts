@@ -1,27 +1,36 @@
 import { create } from 'zustand';
-import { CanvasObject, CanvasState } from '../types';
+import { CanvasState } from '../types';
 
+/**
+ * Canvas UI State Store
+ *
+ * IMPORTANT: This store manages ONLY UI state.
+ * Canvas objects are managed by React Query (useCanvasObjects hook).
+ *
+ * Responsibilities:
+ * - Canvas viewport state (zoom, pan)
+ * - Object selection state
+ * - UI preferences (grid visibility)
+ * - Loading indicators
+ *
+ * NOT responsible for:
+ * - Canvas objects data (use React Query instead)
+ * - Server state synchronization (use React Query instead)
+ */
 interface CanvasStore {
   // Canvas state (zoom, pan)
   canvasState: CanvasState;
   setCanvasState: (state: CanvasState) => void;
 
-  // Canvas objects
-  objects: CanvasObject[];
-  setObjects: (objects: CanvasObject[]) => void;
-  addObject: (object: CanvasObject) => void;
-  updateObject: (id: number, updates: Partial<CanvasObject>) => void;
-  removeObject: (id: number) => void;
-
-  // Selected object
+  // Selected object ID (UI state only)
   selectedObjectId: number | null;
   setSelectedObjectId: (id: number | null) => void;
 
-  // Loading state
+  // Loading state (UI feedback)
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 
-  // Grid display
+  // Grid display preference
   showGrid: boolean;
   toggleGrid: () => void;
 }
@@ -33,31 +42,19 @@ const INITIAL_CANVAS_STATE: CanvasState = {
 };
 
 export const useCanvasStore = create<CanvasStore>((set) => ({
+  // Canvas viewport state
   canvasState: INITIAL_CANVAS_STATE,
   setCanvasState: (state) => set({ canvasState: state }),
 
-  objects: [],
-  setObjects: (objects) => set({ objects }),
-  addObject: (object) =>
-    set((state) => ({ objects: [...state.objects, object] })),
-  updateObject: (id, updates) =>
-    set((state) => ({
-      objects: state.objects.map((obj) =>
-        obj.id === id ? { ...obj, ...updates } : obj
-      ),
-    })),
-  removeObject: (id) =>
-    set((state) => ({
-      objects: state.objects.filter((obj) => obj.id !== id),
-      selectedObjectId: state.selectedObjectId === id ? null : state.selectedObjectId,
-    })),
-
+  // Object selection (UI state only)
   selectedObjectId: null,
   setSelectedObjectId: (id) => set({ selectedObjectId: id }),
 
+  // Loading indicator
   isLoading: false,
   setIsLoading: (loading) => set({ isLoading: loading }),
 
+  // Grid visibility
   showGrid: true,
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
 }));

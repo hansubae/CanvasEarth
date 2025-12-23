@@ -1,42 +1,58 @@
 spring:
   servlet:
     multipart:
-      max-file-size: 100MB     #비디오 파일 크기제한
-      max-request-size: 100MB  #비디오 파일 크기제한
+      max-file-size: 10MB     # 일반 최대 파일 크기
+      max-request-size: 10MB  # 일반 최대 요청 크기
   codec:
-    max-in-memory-size: 100MB  #비디오 파일 크기제한
+    max-in-memory-size: 10MB  # 메모리 내 최대 크기
   application:
     name: canvas-earth-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/canvasearth
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/canvasearth}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # SECURITY: Use 'validate' in production to prevent accidental schema changes
+      # Use 'update' only in development (see application-dev.yml)
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-    show-sql: true
+        # SECURITY: Disable SQL formatting in production
+        format_sql: false
+    # SECURITY: Disable SQL logging in production to prevent data exposure
+    show-sql: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
   # CORS Configuration
+  # SECURITY: NEVER use "*" for allowed-origins with credentials
+  # Add production origins via ALLOWED_ORIGINS environment variable
   web:
     cors:
-      allowed-origins: "http://localhost:5173"
-      allowed-methods: "*"
-      allowed-headers: "*"
+      allowed-origins:
+        - ${ALLOWED_ORIGIN_1:http://localhost:5173}
+        - ${ALLOWED_ORIGIN_2:http://localhost:3000}
+        - ${ALLOWED_ORIGIN_3:http://localhost:80}
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
       allow-credentials: true
+      max-age: 3600
 
 server:
   port: 8080
   tomcat:
-      max-http-post-size: 100MB  #비디오 파일 크기제한
-      max-swallow-size: 100MB    #비디오 파일 크기제한
+      max-http-post-size: 10MB  # 일반 최대 POST 크기
+      max-swallow-size: 10MB    # 일반 최대 swallow 크기
 
 # Swagger/OpenAPI Configuration
 springdoc:
@@ -44,3 +60,30 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+# Custom File Upload Configuration
+canvas:
+  upload:
+    image:
+      max-size: 5242880  # 5MB in bytes
+      allowed-types: jpg,jpeg,png,gif,webp
+    video:
+      max-size: 52428800  # 50MB in bytes
+      allowed-types: mp4,webm
+
+# Google Cloud Storage Configuration
+gcp:
+  storage:
+    enabled: ${GCP_STORAGE_ENABLED:false}  # Set to true to use GCS instead of local storage
+    bucket-name: ${GCP_STORAGE_BUCKET:}
+    credentials-path: ${GCP_CREDENTIALS_PATH:}  # Path to service account JSON key file
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized

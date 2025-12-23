@@ -10,7 +10,7 @@ interface TextEditorProps {
   canvasY: number; // Canvas Y coordinate
   objectWidth: number; // Width of the text object
   stageRef: React.RefObject<Konva.Stage>;
-  onSave: (text: string, fontSize: number, fontWeight: string, textColor: string) => void;
+  onSave: (text: string, fontSize: number, fontWeight: string, textColor: string, width: number, height: number) => void;
   onCancel: () => void;
 }
 
@@ -46,10 +46,14 @@ export const TextEditor = ({
     const editor = editorRef.current;
     if (!editor) return;
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
+    let isMounted = true; // Track component mount state
     const editorMargin = 20; // Space between text object and editor
 
     const updatePosition = () => {
+      // Stop if component is unmounted
+      if (!isMounted) return;
+
       if (stageRef.current && editor) {
         const stage = stageRef.current;
         const scale = stage.scaleX();
@@ -59,29 +63,87 @@ export const TextEditor = ({
         const screenY = canvasY * scale + stagePos.y;
         const scaledWidth = objectWidth * scale;
 
-        // Position editor to the right of the text object
-        const editorX = screenX + scaledWidth + editorMargin;
+        const editorWidth = editor.offsetWidth || 320; // Default width
+        const editorHeight = editor.offsetHeight || 400; // Approximate height
+
+        // Try to position to the right first
+        let editorX = screenX + scaledWidth + editorMargin;
+        let editorY = screenY;
+
+        // Check if editor goes off screen on the right
+        if (editorX + editorWidth > window.innerWidth) {
+          // Try positioning to the left instead
+          editorX = screenX - editorWidth - editorMargin;
+
+          // If still off screen on the left, clamp to screen
+          if (editorX < 0) {
+            editorX = Math.max(10, Math.min(window.innerWidth - editorWidth - 10, screenX));
+          }
+        }
+
+        // Check if editor goes off screen on the bottom
+        if (editorY + editorHeight > window.innerHeight) {
+          editorY = Math.max(10, window.innerHeight - editorHeight - 10);
+        }
+
+        // Check if editor goes off screen on the top
+        if (editorY < 0) {
+          editorY = 10;
+        }
 
         // Direct DOM manipulation - no React state, no re-render lag
         editor.style.left = `${editorX}px`;
-        editor.style.top = `${screenY}px`;
+        editor.style.top = `${editorY}px`;
       }
 
-      animationFrameId = requestAnimationFrame(updatePosition);
+      // Schedule next frame only if still mounted
+      if (isMounted) {
+        animationFrameId = requestAnimationFrame(updatePosition);
+      }
     };
 
     animationFrameId = requestAnimationFrame(updatePosition);
 
     return () => {
-      if (animationFrameId) {
+      // Set unmount flag to stop recursive calls
+      isMounted = false;
+
+      // Cancel any pending animation frame
+      if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
     };
   }, [canvasX, canvasY, objectWidth, stageRef]);
 
   const handleSave = () => {
     if (text.trim()) {
-      onSave(text, fontSize, fontWeight, textColor);
+      // Create temporary canvas to measure text dimensions
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (ctx) {
+        // Set font to match the text style
+        ctx.font = `${fontWeight} ${fontSize}px Arial, sans-serif`;
+
+        // Split text by newlines
+        const lines = text.split('\n');
+
+        // Measure each line and find the widest
+        let maxWidth = 0;
+        for (const line of lines) {
+          const metrics = ctx.measureText(line);
+          maxWidth = Math.max(maxWidth, metrics.width);
+        }
+
+        // Calculate dimensions with padding
+        const padding = 20;
+        const lineHeight = fontSize * 1.4; // Line height multiplier
+        const newWidth = Math.max(200, maxWidth + padding * 2); // Minimum 200px
+        const newHeight = Math.max(50, lines.length * lineHeight + padding * 2); // Minimum 50px
+
+        onSave(text, fontSize, fontWeight, textColor, newWidth, newHeight);
+      }
     }
   };
 
