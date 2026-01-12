@@ -1,1 +1,8 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal() // 이 부분이 꼭 있어야 합니다.
+        mavenCentral()       // 혹시 모르니 이것도 추가해 주세요.
+        google()
+    }
+}
 rootProject.name = 'canvas-earth-backend'
